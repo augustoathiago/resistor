@@ -382,4 +382,3 @@ with right:
     with c3:
         st.markdown("**Resistência (R)**")
         st.markdown(f"<div style='font-size:28px;font-weight:700'>{R_txt}</div>", unsafe_allow_html=True)
-``
