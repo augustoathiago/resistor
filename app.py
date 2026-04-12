@@ -12,8 +12,8 @@ R_MIN = 1000.0         # slider resistência 1000..1300 Ω
 R_MAX = 1300.0
 X_MAX_mA = 40.0        # eixo X fixo 0..40 mA
 
-# Gráfico com tamanho FIXO (evita “mudar de tamanho”)
-CHART_WIDTH = 900
+# Gráfico com tamanho FIXO (não muda nunca)
+CHART_WIDTH = 980
 CHART_HEIGHT = 360
 
 st.set_page_config(
@@ -161,19 +161,15 @@ else:
 I_mA = I * 1000.0
 
 # ---------------------------
-# Layout: circuito em cima, gráfico embaixo
+# Circuito em cima
 # ---------------------------
 st.markdown("## Circuito (visual)")
 
-# ---------------------------
-# Circuito (SVG) com viewBox DINÂMICO (não corta à direita)
-# ---------------------------
-
-# Resistor cresce com R (mas controlado)
+# Resistor cresce com R (controlado)
 r_norm = (R - R_MIN) / (R_MAX - R_MIN) if R_MAX > R_MIN else 0.0
 r_norm = float(np.clip(r_norm, 0.0, 1.0))
 base_len = 520
-extra = int(260 * r_norm)  # cresce, mas não explode
+extra = int(260 * r_norm)
 res_len = base_len + extra
 
 wire_color = "#22c55e" if sw else "#94a3b8"
@@ -188,7 +184,7 @@ src_w, src_h = 240, 340
 src_x = x0 - (src_w // 2)
 src_y = y0 - (src_h // 2)
 
-# Interruptor mais comprido e fecha visualmente no ON
+# Interruptor mais comprido, fecha no ON
 x_sw1 = x0 + 430
 gap_sw = 240
 x_sw2 = x_sw1 + gap_sw
@@ -205,7 +201,7 @@ xR2 = xR1 + res_len
 xA = xR2 + 280
 rA = 62
 
-# Display do amperímetro (à direita) — isso costuma ser o “mais à direita”
+# Display amperímetro
 am_w, am_h = 420, 110
 am_x = xA + 220
 am_y = y0 - 160
@@ -220,9 +216,9 @@ vm_w, vm_h = 420, 110
 vm_x = (xR1 + xR2) / 2 - vm_w / 2
 vm_y = yV_top - 160
 
-# ✅ viewBox dinâmico: pega o maior x e soma margem
+# ✅ viewBox dinâmico (para não cortar à direita)
 rightmost = max(x_end, am_x + am_w, xR2 + 60)
-W = int(rightmost + 220)   # margem extra para nunca cortar
+W = int(rightmost + 220)
 
 # Fontes grandes
 fs_title = 44
@@ -238,7 +234,6 @@ Itxt = fmt_sig(I_mA, 3)
 resistor_rx = 44
 resistor_stroke_w = 16
 
-# Posições de texto
 res_label_y = y0 - 135
 sw_label_y = y0 - 130
 
@@ -251,15 +246,12 @@ svg = f"""
        preserveAspectRatio="xMinYMid meet"
        xmlns="http://www.w3.org/2000/svg">
 
-    <!-- fio superior: fonte -> interruptor -->
     <line x1="{x0}" y1="{y0}" x2="{x_sw1}" y2="{y0}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
-    <!-- interruptor: pinos -->
     <circle cx="{x_sw1}" cy="{y0}" r="18" fill="#e5e7eb"/>
     <circle cx="{x_sw2}" cy="{y0}" r="18" fill="#e5e7eb"/>
 
-    <!-- interruptor: braço (fecha no ON) -->
     <line x1="{x_sw1}" y1="{y0}" x2="{arm_x2}" y2="{arm_y2}"
           stroke="#e5e7eb" stroke-width="16" stroke-linecap="round"/>
 
@@ -268,11 +260,9 @@ svg = f"""
       INTERRUPTOR ({'ON' if sw else 'OFF'})
     </text>
 
-    <!-- fio: interruptor -> resistor -->
     <line x1="{x_sw2}" y1="{y0}" x2="{xR1}" y2="{y0}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
-    <!-- resistor -->
     <rect x="{xR1}" y="{y0-90}" width="{res_len}" height="180" rx="{resistor_rx}"
           fill="#111827" stroke="#fbbf24" stroke-width="{resistor_stroke_w}"/>
 
@@ -281,20 +271,16 @@ svg = f"""
       RESISTOR (R = {fmt_sig(R,3)} Ω)
     </text>
 
-    <!-- fio: resistor -> amperímetro -->
     <line x1="{xR2}" y1="{y0}" x2="{xA - rA}" y2="{y0}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
-    <!-- amperímetro (símbolo em série) -->
     <circle cx="{xA}" cy="{y0}" r="{rA}" fill="#0f172a" stroke="#10b981" stroke-width="5"/>
     <text x="{xA}" y="{y0+16}" fill="#86efac"
           font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">A</text>
 
-    <!-- fio: amperímetro -> final -->
     <line x1="{xA + rA}" y1="{y0}" x2="{x_end}" y2="{y0}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
-    <!-- retorno inferior -->
     <line x1="{x_end}" y1="{y0}" x2="{x_end}" y2="{y_bot}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
     <line x1="{x_end}" y1="{y_bot}" x2="{x0}" y2="{y_bot}"
@@ -302,23 +288,23 @@ svg = f"""
     <line x1="{x0}" y1="{y_bot}" x2="{x0}" y2="{y0}"
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
-    <!-- fonte -->
     <rect x="{src_x}" y="{src_y}" width="{src_w}" height="{src_h}" rx="44"
           fill="#111827" stroke="#334155" stroke-width="4"/>
     <text x="{x0}" y="{src_y + 85}" fill="#e5e7eb"
           font-size="{fs_title}" font-family="ui-sans-serif" text-anchor="middle">FONTE</text>
+
     <rect x="{x0-90}" y="{y0-28}" width="180" height="86" rx="22"
           fill="#0f172a" stroke="#475569" stroke-width="3"/>
     <text x="{x0}" y="{y0+32}" fill="#38bdf8"
           font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">{Vtxt} V</text>
 
-    <!-- voltímetro (fios antes e depois do resistor) -->
     <line x1="{xR1}" y1="{y0}" x2="{xR1}" y2="{yV_top}" stroke="#a78bfa" stroke-width="7"/>
     <line x1="{xR2}" y1="{y0}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="7"/>
     <line x1="{xR1}" y1="{yV_top}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="7"/>
 
     <text x="{(xR1+xR2)/2}" y="{vm_y-18}" fill="#e5e7eb"
           font-size="{fs_title}" font-family="ui-sans-serif" text-anchor="middle">Voltímetro</text>
+
     <rect x="{vm_x}" y="{vm_y}" width="{vm_w}" height="{vm_h}" rx="22"
           fill="#0f172a" stroke="#7c3aed" stroke-width="4"/>
     <text x="{vm_x + vm_w/2}" y="{vm_y + 72}" fill="#c4b5fd"
@@ -326,7 +312,6 @@ svg = f"""
       V<tspan baseline-shift="sub" font-size="{fs_body}">R</tspan> = {VRtxt} V
     </text>
 
-    <!-- amperímetro: rótulo + display -->
     <text x="{am_x + am_w/2}" y="{am_y-18}" fill="#e5e7eb"
           font-size="{fs_title}" font-family="ui-sans-serif" text-anchor="middle">Amperímetro</text>
     <rect x="{am_x}" y="{am_y}" width="{am_w}" height="{am_h}" rx="22"
@@ -335,26 +320,38 @@ svg = f"""
           font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">
       I = {Itxt} mA
     </text>
-
   </svg>
 </div>
 """
 st.components.v1.html(svg, height=600)
 
 # ---------------------------
-# Gráfico embaixo — com eixo Y fixo 0..30 V e TAMANHO FIXO
+# Gráfico embaixo — eixos e tamanho totalmente FIXOS + ticks fixos
 # ---------------------------
 st.markdown("## Gráfico: Tensão × Corrente (V×I)")
 
-I_line_mA = np.linspace(0.0, X_MAX_mA, 300)
+I_line_mA = np.linspace(0.0, X_MAX_mA, 301)
 V_line = R * (I_line_mA / 1000.0)
 
 df_line = pd.DataFrame({"corrente_mA": I_line_mA, "tensao_V": V_line})
 df_point = pd.DataFrame({"corrente_mA": [I_mA], "tensao_V": [V_R]})
 
+x_ticks = list(range(0, 41, 2))   # 0..40 de 2 em 2
+y_ticks = list(range(0, 31, 5))   # 0..30 de 5 em 5
+
 base = alt.Chart(df_line).encode(
-    x=alt.X("corrente_mA:Q", title="Corrente (mA)", scale=alt.Scale(domain=[0, X_MAX_mA])),
-    y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),
+    x=alt.X(
+        "corrente_mA:Q",
+        title="Corrente (mA)",
+        scale=alt.Scale(domain=[0, X_MAX_mA], nice=False, clamp=True),
+        axis=alt.Axis(values=x_ticks, labelFontSize=14, titleFontSize=16, grid=True),
+    ),
+    y=alt.Y(
+        "tensao_V:Q",
+        title="Tensão (V)",
+        scale=alt.Scale(domain=[0, V_MAX], nice=False, clamp=True),
+        axis=alt.Axis(values=y_ticks, labelFontSize=14, titleFontSize=16, grid=True),
+    ),
 )
 
 line = base.mark_line()
@@ -365,18 +362,17 @@ point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
     color=alt.value(point_color),
 )
 
-# ✅ fixar tamanho e padding do chart (para não “encolher/esticar”)
 chart = (line + point).properties(
     width=CHART_WIDTH,
     height=CHART_HEIGHT,
-    padding={"left": 60, "right": 20, "top": 20, "bottom": 55},
-).configure_axis(
-    labelFontSize=14,
-    titleFontSize=16,
+    padding={"left": 70, "right": 25, "top": 20, "bottom": 60},
 ).configure_view(
     strokeWidth=0
+).configure_axis(
+    tickSize=6
 )
 
+# ✅ Não responsivo (não muda tamanho)
 st.altair_chart(chart, use_container_width=False)
 
 # ---------------------------
