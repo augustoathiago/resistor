@@ -348,4 +348,3 @@ with right:
     c1.metric("Corrente (I)", fmt_current(I))
     c2.metric("Tensão no resistor (V_R)", fmt_voltage(V_R))
     c3.metric("Resistência (R)", f"{R:.1f} Ω")
-``
