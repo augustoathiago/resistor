@@ -270,3 +270,134 @@ with left:
 
         <!-- resistor como linha amarela grossa -->
         <line x1="{resistor_line_x1}" y1="{resistor_line_y}" x2="{resistor_line_x2}" y2="{resistor_line_y}"
+              stroke="#fbbf24" stroke-width="16" stroke-linecap="round"/>
+
+        <text x="{xR1 + res_len/2}" y="{y0-80}" fill="#e5e7eb" font-size="{fs_body}"
+              font-family="ui-sans-serif" text-anchor="middle">
+          RESISTOR (R = {fmt_sig(R,3)} Ω)
+        </text>
+
+        <!-- fio: resistor -> amperímetro -->
+        <line x1="{xR2}" y1="{y0}" x2="{xA - rA}" y2="{y0}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
+
+        <!-- amperímetro (símbolo) -->
+        <circle cx="{xA}" cy="{y0}" r="{rA}" fill="#0f172a" stroke="#10b981" stroke-width="3.5"/>
+        <text x="{xA}" y="{y0+8}" fill="#86efac" font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">A</text>
+
+        <!-- fio: amperímetro -> final -->
+        <line x1="{xA + rA}" y1="{y0}" x2="{x_end}" y2="{y0}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
+
+        <!-- retorno inferior -->
+        <line x1="{x_end}" y1="{y0}" x2="{x_end}" y2="{y_bot}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
+        <line x1="{x_end}" y1="{y_bot}" x2="{x0}" y2="{y_bot}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
+        <line x1="{x0}" y1="{y_bot}" x2="{x0}" y2="{y0}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
+
+        <!-- fonte -->
+        <rect x="{x0-78}" y="{y0-120}" width="156" height="240" rx="26"
+              fill="#111827" stroke="#334155" stroke-width="3"/>
+        <text x="{x0}" y="{y0-68}" fill="#e5e7eb" font-size="{fs_title}"
+              font-family="ui-sans-serif" text-anchor="middle">FONTE</text>
+        <rect x="{x0-54}" y="{y0-18}" width="108" height="52" rx="14"
+              fill="#0f172a" stroke="#475569" stroke-width="2.4"/>
+        <text x="{x0}" y="{y0+18}" fill="#38bdf8" font-size="{fs_mono}"
+              font-family="ui-monospace" text-anchor="middle">{Vtxt} V</text>
+
+        <!-- voltímetro: fios antes e depois do resistor -->
+        <line x1="{xR1}" y1="{y0}" x2="{xR1}" y2="{yV_top}" stroke="#a78bfa" stroke-width="5"/>
+        <line x1="{xR2}" y1="{y0}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="5"/>
+        <line x1="{xR1}" y1="{yV_top}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="5"/>
+
+        <text x="{(xR1+xR2)/2}" y="{vm_y-12}" fill="#e5e7eb" font-size="{fs_title}"
+              font-family="ui-sans-serif" text-anchor="middle">Voltímetro</text>
+
+        <rect x="{vm_x}" y="{vm_y}" width="{vm_w}" height="{vm_h}" rx="16"
+              fill="#0f172a" stroke="#7c3aed" stroke-width="2.6"/>
+
+        <text x="{vm_x + vm_w/2}" y="{vm_y + 42}" fill="#c4b5fd"
+              font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">
+          V<tspan baseline-shift="sub" font-size="{fs_body}">R</tspan> = {VRtxt} V
+        </text>
+
+        <!-- rótulo + display corrente -->
+        <text x="{am_x + am_w/2}" y="{am_y-12}" fill="#e5e7eb" font-size="{fs_title}"
+              font-family="ui-sans-serif" text-anchor="middle">Amperímetro</text>
+
+        <rect x="{am_x}" y="{am_y}" width="{am_w}" height="{am_h}" rx="16"
+              fill="#0f172a" stroke="#10b981" stroke-width="2.6"/>
+        <text x="{am_x + am_w/2}" y="{am_y + 42}" fill="#86efac"
+              font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">
+          I = {Itxt_mA} mA
+        </text>
+
+      </svg>
+    </div>
+    """
+    st.components.v1.html(svg, height=560)
+
+# ---------------------------
+# Gráfico V × I (X fixo 0..40 mA, Y fixo 0..30 V)
+# ---------------------------
+with right:
+    st.markdown("## Gráfico: Tensão × Corrente (V×I)")
+
+    I_line_mA = np.linspace(0.0, X_MAX_mA, 300)
+    V_line = R * (I_line_mA / 1000.0)
+
+    df_line = pd.DataFrame({"corrente_mA": I_line_mA, "tensao_V": V_line})
+    df_point = pd.DataFrame({"corrente_mA": [I_mA], "tensao_V": [V_R]})
+
+    base = alt.Chart(df_line).encode(
+        x=alt.X("corrente_mA:Q", title="Corrente (mA)", scale=alt.Scale(domain=[0, X_MAX_mA])),
+        y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),
+    )
+
+    line = base.mark_line()
+
+    point_color = "#ef4444" if sw else "#64748b"
+    point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
+        x="corrente_mA:Q",
+        y="tensao_V:Q",
+        color=alt.value(point_color),
+        tooltip=[
+            alt.Tooltip("corrente_mA:Q", title="I (mA)", format=".3f"),
+            alt.Tooltip("tensao_V:Q", title="V_R (V)", format=".3f"),
+        ],
+    )
+
+    st.altair_chart((line + point).properties(height=350), use_container_width=True)
+
+    # ---------------------------
+    # Leituras (símbolo embaixo do nome)
+    # ---------------------------
+    st.markdown("### Leituras")
+
+    I_txt = f"{fmt_sig(I_mA,3)} mA"
+    VR_txt = f"{fmt_sig(V_R,3)} V"
+    R_txt = f"{fmt_sig(R,3)} Ω"
+
+    def leitura_card(nome: str, simbolo_html: str, valor: str):
+        st.markdown(
+            f"""
+            <div style="line-height:1.05;">
+              <div style="font-weight:600;">{nome}</div>
+              <div style="opacity:0.9; font-weight:600;">{simbolo_html}</div>
+              <div style="font-size:28px;font-weight:800;margin-top:6px;">{valor}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        leitura_card("Corrente", "I", I_txt)
+
+    with c2:
+        # mantém em uma linha com nowrap e subíndice
+        leitura_card(
+            "Tensão do resistor",
+            "<span style='white-space:nowrap;'>V<sub>R</sub></span>",
+            VR_txt
+        )
+
+    with c3:
+        leitura_card("Resistência", "R", R_txt)
