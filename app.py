@@ -8,7 +8,7 @@ import math
 # Constantes
 # ---------------------------
 V_MAX = 30.0           # eixo Y fixo 0..30 V
-R_MIN = 1000.0         # resistência 1000..1300 Ω
+R_MIN = 500.0         # resistência 1000..1300 Ω
 R_MAX = 1300.0
 X_MAX_mA = 40.0        # eixo X fixo 0..40 mA
 
