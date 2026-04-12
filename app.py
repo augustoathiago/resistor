@@ -428,4 +428,3 @@ with c2:
     leitura_card("Tensão do resistor", "<span style='white-space:nowrap;'>V<sub>R</sub></span>", VR_txt)
 with c3:
     leitura_card("Resistência", "R", R_txt)
-``
