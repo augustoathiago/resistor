@@ -5,12 +5,12 @@ import altair as alt
 import math
 
 # ---------------------------
-# Constantes (sem controles de limites)
+# Constantes
 # ---------------------------
-V_MAX = 30.0      # slider tensão
-R_MIN = 1000.0      # slider resistência
-R_MAX = 2000.0    # (pedido: 10 a 1000 Ω)
-X_MAX_mA = 40.0   # (pedido: eixo x fixo 0..40 mA)
+V_MAX = 30.0        # Eixo Y fixo 0..30 V e slider da fonte 0..30
+R_MIN = 1000.0      # (pedido) 1000..2000 Ω
+R_MAX = 2000.0
+X_MAX_mA = 40.0     # (pedido) eixo X fixo 0..40 mA
 
 st.set_page_config(
     page_title="Simulador Resistor Física 2",
@@ -24,7 +24,7 @@ st.set_page_config(
 def fmt_sig(x: float, sig: int = 3) -> str:
     """Formata com 'sig' algarismos significativos, preservando zeros."""
     if x == 0 or abs(x) < 1e-300:
-        return "0." + "0" * (sig - 1)  # sig=3 -> 0.00
+        return "0." + "0" * (sig - 1)  # sig=3 => 0.00
     ax = abs(x)
     exp = math.floor(math.log10(ax))
     dec = sig - exp - 1
@@ -52,7 +52,7 @@ def toggle_switch():
     st.session_state["sw"] = not st.session_state.get("sw", True)
 
 # ---------------------------
-# Estado inicial
+# Estado inicial (valores dentro do intervalo 1000..2000)
 # ---------------------------
 if "V_slider" not in st.session_state:
     st.session_state["V_slider"] = 5.0
@@ -60,9 +60,9 @@ if "V_input" not in st.session_state:
     st.session_state["V_input"] = 5.0
 
 if "R_slider" not in st.session_state:
-    st.session_state["R_slider"] = 220.0
+    st.session_state["R_slider"] = 1500.0
 if "R_input" not in st.session_state:
-    st.session_state["R_input"] = 220.0
+    st.session_state["R_input"] = 1500.0
 
 if "sw" not in st.session_state:
     st.session_state["sw"] = True
@@ -84,7 +84,7 @@ with top_right:
 st.divider()
 
 # ---------------------------
-# Sidebar: controles (renomeados)
+# Sidebar: controles
 # ---------------------------
 st.sidebar.title("Controles")
 
@@ -147,8 +147,8 @@ btn_label = "Abrir circuito (OFF)" if st.session_state["sw"] else "Fechar circui
 st.sidebar.button(
     btn_label,
     use_container_width=True,
-    on_click=toggle_switch,   # 1 clique
-    key="btn_switch"
+    on_click=toggle_switch,
+    key="btn_switch",
 )
 st.sidebar.write(f"**Estado:** {'ON (fechado)' if st.session_state['sw'] else 'OFF (aberto)'}")
 
@@ -172,223 +172,101 @@ I_mA = I * 1000.0
 # ---------------------------
 # Layout principal
 # ---------------------------
-left, right = st.columns([1.2, 1.0], gap="large")
+left, right = st.columns([1.25, 1.0], gap="large")
 
 # ---------------------------
-# Circuito (SVG)
-# Ajustes:
-# - mais espaço horizontal (W maior)
-# - resistor: linha amarela grossa (sem zigzag)
-# - fontes maiores
-# - labels "Voltímetro" e "Amperímetro"
-# - garante que tudo caiba para R até 1000 Ω
+# Circuito (SVG) - fontes bem maiores
 # ---------------------------
 with left:
     st.markdown("## Circuito (visual)")
 
-    # Comprimento do resistor cresce com R (log suave)
-    r_norm = (np.log10(R) - np.log10(R_MIN)) / (np.log10(R_MAX) - np.log10(R_MIN))
+    # Comprimento do resistor cresce com R (intervalo 1000..2000)
+    r_norm = (R - R_MIN) / (R_MAX - R_MIN) if R_MAX > R_MIN else 0.0
     r_norm = float(np.clip(r_norm, 0.0, 1.0))
-    base_len = 160
-    extra = int(320 * r_norm)
+    base_len = 260
+    extra = int(260 * r_norm)
     res_len = base_len + extra
 
     wire_color = "#22c55e" if sw else "#94a3b8"
-    glow_style = "filter: drop-shadow(0px 0px 8px rgba(34,197,94,0.55));" if sw else ""
+    glow_style = "filter: drop-shadow(0px 0px 10px rgba(34,197,94,0.55));" if sw else ""
 
-    # Canvas (bem largo para não cortar)
-    W, H = 1600, 520
-
-    x0, y0 = 120, 290
+    # Canvas bem largo para não cortar (mesmo com resistor grande)
+    W, H = 1900, 560
+    x0, y0 = 130, 320
 
     # Interruptor
-    x_sw1 = x0 + 270
-    x_sw2 = x_sw1 + 110
-    arm_x2 = x_sw1 + 70
-    arm_y2 = y0 - (38 if not sw else 0)
+    x_sw1 = x0 + 300
+    x_sw2 = x_sw1 + 120
+    arm_x2 = x_sw1 + 76
+    arm_y2 = y0 - (42 if not sw else 0)
 
     # Resistor
-    xR1 = x_sw2 + 120
+    xR1 = x_sw2 + 140
     xR2 = xR1 + res_len
 
-    # Amperímetro em série
-    xA = xR2 + 170
-    rA = 32
+    # Amperímetro
+    xA = xR2 + 200
+    rA = 36
 
-    # Fechamento do circuito
-    x_end = xA + 270
-    y_bot = y0 + 160
+    # Fechamento
+    x_end = xA + 320
+    y_bot = y0 + 170
 
-    # Voltímetro (fios antes e depois do resistor)
-    yV_top = y0 - 150
-    vm_w, vm_h = 210, 52
+    # Voltímetro
+    yV_top = y0 - 170
+    vm_w, vm_h = 260, 64
     vm_x = (xR1 + xR2) / 2 - vm_w / 2
-    vm_y = yV_top - 74
+    vm_y = yV_top - 90
 
-    # Display corrente (próximo ao amperímetro)
-    am_w, am_h = 210, 52
-    am_x = xA + 95
-    am_y = y0 - 80
+    # Display corrente + rótulo
+    am_w, am_h = 260, 64
+    am_x = xA + 120
+    am_y = y0 - 95
 
-    # Textos (3 alg. sig. e corrente em mA)
+    # Textos (3 alg. sig.)
     Vtxt = fmt_sig(Vsrc, 3)
     VRtxt = fmt_sig(V_R, 3)
     Itxt_mA = fmt_sig(I_mA, 3)
 
-    # Resistor como linha amarela grossa no centro do corpo do resistor
+    # Resistor como linha amarela grossa
     resistor_line_y = y0
-    resistor_line_x1 = xR1 + 18
-    resistor_line_x2 = xR2 - 18
+    resistor_line_x1 = xR1 + 22
+    resistor_line_x2 = xR2 - 22
+
+    # Fontes grandes (pedido)
+    fs_title = 22     # labels gerais (FONTE, Voltímetro, Amperímetro)
+    fs_body = 20      # textos principais
+    fs_mono = 24      # displays numéricos
+    fs_small = 18     # textos secundários
 
     svg = f"""
     <div style="background:#0b1220;border-radius:18px;padding:18px;{glow_style}">
-      <svg width="100%" height="460" viewBox="0 0 {W} {H}"
+      <svg width="100%" height="520" viewBox="0 0 {W} {H}"
            preserveAspectRatio="xMidYMid meet"
            xmlns="http://www.w3.org/2000/svg">
 
         <!-- fio superior: fonte -> interruptor -->
-        <line x1="{x0}" y1="{y0}" x2="{x_sw1}" y2="{y0}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
+        <line x1="{x0}" y1="{y0}" x2="{x_sw1}" y2="{y0}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
 
         <!-- interruptor: pinos -->
-        <circle cx="{x_sw1}" cy="{y0}" r="11" fill="#e5e7eb"/>
-        <circle cx="{x_sw2}" cy="{y0}" r="11" fill="#e5e7eb"/>
+        <circle cx="{x_sw1}" cy="{y0}" r="12" fill="#e5e7eb"/>
+        <circle cx="{x_sw2}" cy="{y0}" r="12" fill="#e5e7eb"/>
 
         <!-- interruptor: braço -->
         <line x1="{x_sw1}" y1="{y0}" x2="{arm_x2}" y2="{arm_y2}"
-              stroke="#e5e7eb" stroke-width="9" stroke-linecap="round"/>
+              stroke="#e5e7eb" stroke-width="10" stroke-linecap="round"/>
 
-        <text x="{(x_sw1+x_sw2)/2}" y="{y0-54}" fill="#e5e7eb" font-size="16"
+        <text x="{(x_sw1+x_sw2)/2}" y="{y0-62}" fill="#e5e7eb" font-size="{fs_small}"
               font-family="ui-sans-serif" text-anchor="middle">
           INTERRUPTOR ({'ON' if sw else 'OFF'})
         </text>
 
         <!-- fio: interruptor -> resistor -->
-        <line x1="{x_sw2}" y1="{y0}" x2="{xR1}" y2="{y0}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
+        <line x1="{x_sw2}" y1="{y0}" x2="{xR1}" y2="{y0}" stroke="{wire_color}" stroke-width="12" stroke-linecap="round"/>
 
         <!-- corpo do resistor -->
-        <rect x="{xR1}" y="{y0-44}" width="{res_len}" height="88" rx="22"
-              fill="#111827" stroke="#64748b" stroke-width="2.5"/>
+        <rect x="{xR1}" y="{y0-52}" width="{res_len}" height="104" rx="26"
+              fill="#111827" stroke="#64748b" stroke-width="3"/>
 
-        <!-- resistor como linha amarela grossa (pedido) -->
+        <!-- resistor como linha amarela grossa -->
         <line x1="{resistor_line_x1}" y1="{resistor_line_y}" x2="{resistor_line_x2}" y2="{resistor_line_y}"
-              stroke="#fbbf24" stroke-width="12" stroke-linecap="round"/>
-
-        <text x="{xR1 + res_len/2}" y="{y0-70}" fill="#e5e7eb" font-size="16"
-              font-family="ui-sans-serif" text-anchor="middle">
-          RESISTOR (R = {fmt_sig(R,3)} Ω)
-        </text>
-
-        <!-- fio: resistor -> amperímetro -->
-        <line x1="{xR2}" y1="{y0}" x2="{xA - rA}" y2="{y0}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
-
-        <!-- amperímetro -->
-        <circle cx="{xA}" cy="{y0}" r="{rA}" fill="#0f172a" stroke="#10b981" stroke-width="3.2"/>
-        <text x="{xA}" y="{y0+7}" fill="#86efac" font-size="18" font-family="ui-monospace" text-anchor="middle">A</text>
-
-        <!-- fio: amperímetro -> final -->
-        <line x1="{xA + rA}" y1="{y0}" x2="{x_end}" y2="{y0}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
-
-        <!-- retorno inferior -->
-        <line x1="{x_end}" y1="{y0}" x2="{x_end}" y2="{y_bot}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
-        <line x1="{x_end}" y1="{y_bot}" x2="{x0}" y2="{y_bot}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
-        <line x1="{x0}" y1="{y_bot}" x2="{x0}" y2="{y0}" stroke="{wire_color}" stroke-width="10" stroke-linecap="round"/>
-
-        <!-- fonte -->
-        <rect x="{x0-70}" y="{y0-105}" width="140" height="210" rx="22"
-              fill="#111827" stroke="#334155" stroke-width="2.5"/>
-        <text x="{x0}" y="{y0-58}" fill="#e5e7eb" font-size="18"
-              font-family="ui-sans-serif" text-anchor="middle">FONTE</text>
-        <rect x="{x0-48}" y="{y0-16}" width="96" height="44" rx="12"
-              fill="#0f172a" stroke="#475569" stroke-width="2"/>
-        <text x="{x0}" y="{y0+16}" fill="#38bdf8" font-size="20"
-              font-family="ui-monospace" text-anchor="middle">{Vtxt} V</text>
-
-        <!-- voltímetro: fios antes e depois do resistor -->
-        <line x1="{xR1}" y1="{y0}" x2="{xR1}" y2="{yV_top}" stroke="#a78bfa" stroke-width="4.5"/>
-        <line x1="{xR2}" y1="{y0}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="4.5"/>
-        <line x1="{xR1}" y1="{yV_top}" x2="{xR2}" y2="{yV_top}" stroke="#a78bfa" stroke-width="4.5"/>
-
-        <text x="{(xR1+xR2)/2}" y="{vm_y-10}" fill="#e5e7eb" font-size="16"
-              font-family="ui-sans-serif" text-anchor="middle">Voltímetro</text>
-
-        <rect x="{vm_x}" y="{vm_y}" width="{vm_w}" height="{vm_h}" rx="14"
-              fill="#0f172a" stroke="#7c3aed" stroke-width="2.2"/>
-
-        <text x="{vm_x + vm_w/2}" y="{vm_y + 33}" fill="#c4b5fd"
-              font-size="18" font-family="ui-monospace" text-anchor="middle">
-          V<tspan baseline-shift="sub" font-size="14">R</tspan> = {VRtxt} V
-        </text>
-
-        <!-- display corrente + rótulo -->
-        <text x="{am_x + am_w/2}" y="{am_y-10}" fill="#e5e7eb" font-size="16"
-              font-family="ui-sans-serif" text-anchor="middle">Amperímetro</text>
-
-        <rect x="{am_x}" y="{am_y}" width="{am_w}" height="{am_h}" rx="14"
-              fill="#0f172a" stroke="#10b981" stroke-width="2.2"/>
-        <text x="{am_x + am_w/2}" y="{am_y + 33}" fill="#86efac"
-              font-size="18" font-family="ui-monospace" text-anchor="middle">
-          I = {Itxt_mA} mA
-        </text>
-
-      </svg>
-    </div>
-    """
-    st.components.v1.html(svg, height=500)
-
-# ---------------------------
-# Gráfico V × I (eixo x fixo 0..40 mA)
-# ---------------------------
-with right:
-    st.markdown("## Gráfico: Tensão × Corrente (V×I)")
-
-    # Reta V = R * I (I em mA => I(A)=I(mA)/1000)
-    I_line_mA = np.linspace(0.0, X_MAX_mA, 300)
-    V_line = R * (I_line_mA / 1000.0)
-
-    df_line = pd.DataFrame({"corrente_mA": I_line_mA, "tensao_V": V_line})
-    df_point = pd.DataFrame({"corrente_mA": [I_mA], "tensao_V": [V_R]})
-
-    base = alt.Chart(df_line).encode(
-        x=alt.X("corrente_mA:Q", title="Corrente (mA)", scale=alt.Scale(domain=[0, X_MAX_mA])),
-        y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),
-    )
-
-    line = base.mark_line()
-
-    point_color = "#ef4444" if sw else "#64748b"
-    point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
-        x="corrente_mA:Q",
-        y="tensao_V:Q",
-        color=alt.value(point_color),
-        tooltip=[
-            alt.Tooltip("corrente_mA:Q", title="I (mA)", format=".3f"),
-            alt.Tooltip("tensao_V:Q", title="V_R (V)", format=".3f"),
-        ],
-    )
-
-    st.altair_chart((line + point).properties(height=350), use_container_width=True)
-
-    # Leituras (tudo com 3 alg. sig., corrente sempre mA)
-    st.markdown("### Leituras")
-
-    I_txt = f"{fmt_sig(I_mA,3)} mA"
-    VR_txt = f"{fmt_sig(V_R,3)} V"
-    R_txt = f"{fmt_sig(R,3)} Ω"
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("**Corrente (I)**")
-        st.markdown(f"<div style='font-size:28px;font-weight:700'>{I_txt}</div>", unsafe_allow_html=True)
-
-    with c2:
-        # força 1 linha (sem quebra)
-        st.markdown(
-            r"<div style='white-space:nowrap;'><b>Tensão do resistor ($V_R$)</b></div>",
-            unsafe_allow_html=True
-        )
-        st.markdown(f"<div style='font-size:28px;font-weight:700'>{VR_txt}</div>", unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("**Resistência (R)**")
-        st.markdown(f"<div style='font-size:28px;font-weight:700'>{R_txt}</div>", unsafe_allow_html=True)
