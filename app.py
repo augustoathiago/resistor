@@ -7,14 +7,17 @@ import math
 # ---------------------------
 # Constantes
 # ---------------------------
-V_MAX = 30.0          # Slider e eixo Y do gráfico (0..30 V)
-R_MIN = 1000.0        # (pedido) 1000..1300 Ω
+V_MAX = 30.0          # Slider e eixo Y do gráfico (0..30 V)  ✅ eixo vertical fixo
+R_MIN = 1000.0        # resistência (mantido como estava na última versão)
 R_MAX = 1300.0
-X_MAX_mA = 40.0       # (pedido) eixo X fixo 0..40 mA
+X_MAX_mA = 40.0       # eixo X fixo (0..40 mA)
 
-# Gráfico com tamanho horizontal fixo (pedido)
+# Tamanho fixo do gráfico (opcional; mantém horizontal estável)
 CHART_WIDTH = 560
 CHART_HEIGHT = 280
+
+# ✅ Triplicar tamanho da fonte no circuito
+FONT_SCALE = 3.0
 
 st.set_page_config(
     page_title="Simulador Resistor Física 2",
@@ -26,7 +29,6 @@ st.set_page_config(
 # Formatação: 3 algarismos significativos
 # ---------------------------
 def fmt_sig(x: float, sig: int = 3) -> str:
-    """Formata com 'sig' algarismos significativos, preservando zeros."""
     if x == 0 or abs(x) < 1e-300:
         return "0." + "0" * (sig - 1)  # sig=3 => 0.00
     ax = abs(x)
@@ -66,7 +68,7 @@ if "sw" not in st.session_state:
     st.session_state["sw"] = True
 
 # ---------------------------
-# Cabeçalho (logo + título + descrição)
+# Cabeçalho
 # ---------------------------
 top_left, top_right = st.columns([0.18, 0.82], vertical_alignment="center")
 with top_left:
@@ -142,12 +144,7 @@ with cR2:
 
 st.sidebar.subheader("Interruptor")
 btn_label = "Abrir circuito (OFF)" if st.session_state["sw"] else "Fechar circuito (ON)"
-st.sidebar.button(
-    btn_label,
-    use_container_width=True,
-    on_click=toggle_switch,
-    key="btn_switch"
-)
+st.sidebar.button(btn_label, use_container_width=True, on_click=toggle_switch, key="btn_switch")
 st.sidebar.write(f"**Estado:** {'ON (fechado)' if st.session_state['sw'] else 'OFF (aberto)'}")
 
 # Valores finais
@@ -173,16 +170,12 @@ I_mA = I * 1000.0
 left, right = st.columns([1.35, 1.0], gap="large")
 
 # ---------------------------
-# Circuito (SVG)
-# - fontes maiores
-# - resistor: retângulo arredondado com borda amarela grossa
-# - sem linha amarela interna
-# - canvas largo para não cortar
+# Circuito (SVG) com fontes 3x maiores
 # ---------------------------
 with left:
     st.markdown("## Circuito (visual)")
 
-    # Comprimento do resistor cresce com R (1000..1300)
+    # Comprimento do resistor cresce com R
     r_norm = (R - R_MIN) / (R_MAX - R_MIN) if R_MAX > R_MIN else 0.0
     r_norm = float(np.clip(r_norm, 0.0, 1.0))
     base_len = 420
@@ -192,7 +185,7 @@ with left:
     wire_color = "#22c55e" if sw else "#94a3b8"
     glow_style = "filter: drop-shadow(0px 0px 12px rgba(34,197,94,0.55));" if sw else ""
 
-    # Canvas bem largo (para nunca cortar)
+    # Canvas largo para não cortar
     W, H = 2400, 640
     x0, y0 = 160, 380
 
@@ -214,7 +207,7 @@ with left:
     x_end = xA + 460
     y_bot = y0 + 210
 
-    # Voltímetro (acima do resistor)
+    # Voltímetro
     yV_top = y0 - 220
     vm_w, vm_h = 360, 92
     vm_x = (xR1 + xR2) / 2 - vm_w / 2
@@ -230,13 +223,13 @@ with left:
     VRtxt = fmt_sig(V_R, 3)
     Itxt_mA = fmt_sig(I_mA, 3)
 
-    # Fontes bem maiores (pedido: legibilidade)
-    fs_title = 36     # labels: FONTE, Voltímetro, Amperímetro
-    fs_body = 34      # textos de componente
-    fs_mono = 40      # displays numéricos
-    fs_small = 28     # textos secundários
+    # ✅ Fontes TRIPLICADAS (multiplicador)
+    fs_title = int(36 * FONT_SCALE)   # labels
+    fs_body  = int(34 * FONT_SCALE)   # textos de componente
+    fs_mono  = int(40 * FONT_SCALE)   # displays numéricos
+    fs_small = int(28 * FONT_SCALE)   # secundários
 
-    # Resistor: borda amarela grossa (sem linha interna)
+    # Resistor: retângulo com borda amarela grossa (sem linha interna)
     resistor_rx = 34
     resistor_stroke_w = 12
 
@@ -265,7 +258,7 @@ with left:
         <line x1="{x_sw2}" y1="{y0}" x2="{xR1}" y2="{y0}"
               stroke="{wire_color}" stroke-width="16" stroke-linecap="round"/>
 
-        <!-- resistor (retângulo arredondado com borda amarela grossa) -->
+        <!-- resistor -->
         <rect x="{xR1}" y="{y0-74}" width="{res_len}" height="148" rx="{resistor_rx}"
               fill="#111827" stroke="#fbbf24" stroke-width="{resistor_stroke_w}"/>
 
@@ -338,7 +331,7 @@ with left:
     st.components.v1.html(svg, height=600)
 
 # ---------------------------
-# Gráfico V × I (tamanho fixo + eixos fixos)
+# Gráfico V × I (eixos fixos; eixo vertical fixo 0..30 V)
 # ---------------------------
 with right:
     st.markdown("## Gráfico: Tensão × Corrente (V×I)")
@@ -351,7 +344,7 @@ with right:
 
     base = alt.Chart(df_line).encode(
         x=alt.X("corrente_mA:Q", title="Corrente (mA)", scale=alt.Scale(domain=[0, X_MAX_mA])),
-        y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),
+        y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),  # ✅ eixo vertical fixo
     )
 
     line = base.mark_line()
@@ -369,9 +362,6 @@ with right:
     chart = (line + point).properties(width=CHART_WIDTH, height=CHART_HEIGHT)
     st.altair_chart(chart, use_container_width=False)
 
-    # ---------------------------
-    # Leituras (símbolo embaixo do nome)
-    # ---------------------------
     st.markdown("### Leituras")
 
     I_txt = f"{fmt_sig(I_mA,3)} mA"
