@@ -7,14 +7,14 @@ import math
 # ---------------------------
 # Constantes
 # ---------------------------
-V_MAX = 30.0           # Slider e eixo Y fixo 0..30 V
-R_MIN = 1000.0         # Resistência 1000..1300 Ω
+V_MAX = 30.0           # eixo Y fixo 0..30 V
+R_MIN = 1000.0         # slider resistência 1000..1300 Ω
 R_MAX = 1300.0
-X_MAX_mA = 40.0        # Eixo X fixo 0..40 mA
+X_MAX_mA = 40.0        # eixo X fixo 0..40 mA
 
-# Gráfico com tamanho fixo (não estica horizontalmente)
-CHART_WIDTH = 720
-CHART_HEIGHT = 320
+# Gráfico com tamanho FIXO (evita “mudar de tamanho”)
+CHART_WIDTH = 900
+CHART_HEIGHT = 360
 
 st.set_page_config(
     page_title="Simulador Resistor Física 2",
@@ -37,7 +37,7 @@ def fmt_sig(x: float, sig: int = 3) -> str:
     return f"{rounded:.0f}"
 
 def fmt_mA(I_A: float) -> str:
-    return f"{fmt_sig(I_A * 1000.0, 3)} mA"  # sempre mA
+    return f"{fmt_sig(I_A * 1000.0, 3)} mA"
 
 # ---------------------------
 # Sincronização slider <-> input
@@ -161,30 +161,26 @@ else:
 I_mA = I * 1000.0
 
 # ---------------------------
-# Layout: circuito em cima, gráfico embaixo (para evitar aperto horizontal)
+# Layout: circuito em cima, gráfico embaixo
 # ---------------------------
 st.markdown("## Circuito (visual)")
 
 # ---------------------------
-# Circuito (SVG) - reposicionado para não sobrepor textos
-#   - mais espaço horizontal (viewBox bem largo)
-#   - textos afastados dos componentes
-#   - fontes grandes mas sem empilhar
-#   - interruptor mais comprido e fechado no ON
-#   - resistor com borda amarela grossa
+# Circuito (SVG) com viewBox DINÂMICO (não corta à direita)
 # ---------------------------
-# Comprimento do resistor cresce com R, mas sem estourar
+
+# Resistor cresce com R (mas controlado)
 r_norm = (R - R_MIN) / (R_MAX - R_MIN) if R_MAX > R_MIN else 0.0
 r_norm = float(np.clip(r_norm, 0.0, 1.0))
 base_len = 520
-extra = int(220 * r_norm)
+extra = int(260 * r_norm)  # cresce, mas não explode
 res_len = base_len + extra
 
 wire_color = "#22c55e" if sw else "#94a3b8"
 glow_style = "filter: drop-shadow(0px 0px 12px rgba(34,197,94,0.55));" if sw else ""
 
-# Canvas grande
-W, H = 2600, 720
+# Geometria base
+H = 720
 x0, y0 = 200, 430
 
 # Fonte
@@ -192,14 +188,14 @@ src_w, src_h = 240, 340
 src_x = x0 - (src_w // 2)
 src_y = y0 - (src_h // 2)
 
-# Interruptor (mais comprido)
+# Interruptor mais comprido e fecha visualmente no ON
 x_sw1 = x0 + 430
-gap_sw = 220                     # ✅ maior distância entre pinos
+gap_sw = 240
 x_sw2 = x_sw1 + gap_sw
-arm_x2_on = x_sw2                # ✅ no ON encosta no pino direito
+arm_x2_on = x_sw2
 arm_y2_on = y0
 arm_x2_off = x_sw1 + int(gap_sw * 0.70)
-arm_y2_off = y0 - 85
+arm_y2_off = y0 - 95
 
 # Resistor
 xR1 = x_sw2 + 260
@@ -209,26 +205,30 @@ xR2 = xR1 + res_len
 xA = xR2 + 280
 rA = 62
 
+# Display do amperímetro (à direita) — isso costuma ser o “mais à direita”
+am_w, am_h = 420, 110
+am_x = xA + 220
+am_y = y0 - 160
+
 # Fechamento
 x_end = xA + 520
 y_bot = y0 + 240
 
-# Voltímetro (acima do resistor) - bem mais alto para não colidir com texto do resistor
+# Voltímetro
 yV_top = y0 - 255
 vm_w, vm_h = 420, 110
 vm_x = (xR1 + xR2) / 2 - vm_w / 2
 vm_y = yV_top - 160
 
-# Display corrente (fora do fio, afastado)
-am_w, am_h = 420, 110
-am_x = xA + 210
-am_y = y0 - 160
+# ✅ viewBox dinâmico: pega o maior x e soma margem
+rightmost = max(x_end, am_x + am_w, xR2 + 60)
+W = int(rightmost + 220)   # margem extra para nunca cortar
 
-# Fontes grandes (mas organizadas)
-fs_title = 44     # "FONTE", "Voltímetro", "Amperímetro"
-fs_body = 40      # texto em cima do resistor
-fs_mono = 46      # números nos displays
-fs_small = 34     # "INTERRUPTOR (ON/OFF)" etc.
+# Fontes grandes
+fs_title = 44
+fs_body = 40
+fs_mono = 46
+fs_small = 34
 
 Vtxt = fmt_sig(Vsrc, 3)
 VRtxt = fmt_sig(V_R, 3)
@@ -238,20 +238,17 @@ Itxt = fmt_sig(I_mA, 3)
 resistor_rx = 44
 resistor_stroke_w = 16
 
-# Posição do texto do resistor (bem acima do corpo para não encostar)
+# Posições de texto
 res_label_y = y0 - 135
-
-# Posição do texto do interruptor (bem acima dos pinos)
 sw_label_y = y0 - 130
 
-# Braço do interruptor
 arm_x2 = arm_x2_on if sw else arm_x2_off
 arm_y2 = arm_y2_on if sw else arm_y2_off
 
 svg = f"""
 <div style="background:#0b1220;border-radius:18px;padding:18px;{glow_style}">
   <svg width="100%" height="560" viewBox="0 0 {W} {H}"
-       preserveAspectRatio="xMidYMid meet"
+       preserveAspectRatio="xMinYMid meet"
        xmlns="http://www.w3.org/2000/svg">
 
     <!-- fio superior: fonte -> interruptor -->
@@ -262,7 +259,7 @@ svg = f"""
     <circle cx="{x_sw1}" cy="{y0}" r="18" fill="#e5e7eb"/>
     <circle cx="{x_sw2}" cy="{y0}" r="18" fill="#e5e7eb"/>
 
-    <!-- interruptor: braço (agora fecha no ON) -->
+    <!-- interruptor: braço (fecha no ON) -->
     <line x1="{x_sw1}" y1="{y0}" x2="{arm_x2}" y2="{arm_y2}"
           stroke="#e5e7eb" stroke-width="16" stroke-linecap="round"/>
 
@@ -324,13 +321,12 @@ svg = f"""
           font-size="{fs_title}" font-family="ui-sans-serif" text-anchor="middle">Voltímetro</text>
     <rect x="{vm_x}" y="{vm_y}" width="{vm_w}" height="{vm_h}" rx="22"
           fill="#0f172a" stroke="#7c3aed" stroke-width="4"/>
-
     <text x="{vm_x + vm_w/2}" y="{vm_y + 72}" fill="#c4b5fd"
           font-size="{fs_mono}" font-family="ui-monospace" text-anchor="middle">
       V<tspan baseline-shift="sub" font-size="{fs_body}">R</tspan> = {VRtxt} V
     </text>
 
-    <!-- amperímetro (rótulo + display afastado do fio) -->
+    <!-- amperímetro: rótulo + display -->
     <text x="{am_x + am_w/2}" y="{am_y-18}" fill="#e5e7eb"
           font-size="{fs_title}" font-family="ui-sans-serif" text-anchor="middle">Amperímetro</text>
     <rect x="{am_x}" y="{am_y}" width="{am_w}" height="{am_h}" rx="22"
@@ -346,19 +342,18 @@ svg = f"""
 st.components.v1.html(svg, height=600)
 
 # ---------------------------
-# Gráfico embaixo (layout vertical)
+# Gráfico embaixo — com eixo Y fixo 0..30 V e TAMANHO FIXO
 # ---------------------------
 st.markdown("## Gráfico: Tensão × Corrente (V×I)")
 
 I_line_mA = np.linspace(0.0, X_MAX_mA, 300)
-V_line = R * (I_line_mA / 1000.0)  # V = R*I(A)
+V_line = R * (I_line_mA / 1000.0)
 
 df_line = pd.DataFrame({"corrente_mA": I_line_mA, "tensao_V": V_line})
 df_point = pd.DataFrame({"corrente_mA": [I_mA], "tensao_V": [V_R]})
 
 base = alt.Chart(df_line).encode(
     x=alt.X("corrente_mA:Q", title="Corrente (mA)", scale=alt.Scale(domain=[0, X_MAX_mA])),
-    # ✅ eixo vertical travado 0..30 V (não muda mais)
     y=alt.Y("tensao_V:Q", title="Tensão (V)", scale=alt.Scale(domain=[0, V_MAX])),
 )
 
@@ -368,13 +363,20 @@ point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
     x="corrente_mA:Q",
     y="tensao_V:Q",
     color=alt.value(point_color),
-    tooltip=[
-        alt.Tooltip("corrente_mA:Q", title="I (mA)", format=".3f"),
-        alt.Tooltip("tensao_V:Q", title="V_R (V)", format=".3f"),
-    ],
 )
 
-chart = (line + point).properties(width=CHART_WIDTH, height=CHART_HEIGHT)
+# ✅ fixar tamanho e padding do chart (para não “encolher/esticar”)
+chart = (line + point).properties(
+    width=CHART_WIDTH,
+    height=CHART_HEIGHT,
+    padding={"left": 60, "right": 20, "top": 20, "bottom": 55},
+).configure_axis(
+    labelFontSize=14,
+    titleFontSize=16,
+).configure_view(
+    strokeWidth=0
+)
+
 st.altair_chart(chart, use_container_width=False)
 
 # ---------------------------
