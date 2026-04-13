@@ -140,7 +140,7 @@ with cR2:
     )
 
 st.sidebar.subheader("Interruptor")
-btn_label = "Abrir circuito (OFF)" if st.session_state["sw"] else "Fechar circuito (ON)"
+btn_label = "Abrir circuito" if st.session_state["sw"] else "Fechar circuito"
 st.sidebar.button(btn_label, use_container_width=True, on_click=toggle_switch, key="btn_switch")
 st.sidebar.write(f"**Estado:** {'ON (fechado)' if st.session_state['sw'] else 'OFF (aberto)'}")
 
