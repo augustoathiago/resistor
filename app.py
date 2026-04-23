@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import altair as alt
 import math
+import json
+import uuid
 
 # ---------------------------
 # Constantes fixas do simulador
@@ -12,13 +14,14 @@ R_MIN = 750.0          # resistência mínima (Ω)
 R_MAX = 10000.0        # resistência máxima (Ω)
 X_MAX_mA = 40.0        # limite do eixo X (mA)
 
-# Altura do gráfico (largura agora é responsiva para celular)
+# ✅ Gráfico fixo para "sobrar" no celular e permitir scroll
+CHART_WIDTH = 980
 CHART_HEIGHT = 360
 
 st.set_page_config(
     page_title="Simulador Resistor Física 2",
     layout="wide",
-    initial_sidebar_state="collapsed",  # sidebar recolhida (agora não usamos para controles)
+    initial_sidebar_state="collapsed",  # sidebar recolhida (não usamos para controles)
 )
 
 # ---------------------------
@@ -59,6 +62,79 @@ if "R_input" not in st.session_state:
 
 if "sw" not in st.session_state:
     st.session_state["sw"] = True
+
+# ---------------------------
+# Função: renderizar gráfico Altair com scroll horizontal (touch)
+# ---------------------------
+def scrollable_altair(chart: alt.Chart, height_px: int, min_width_px: int):
+    """
+    Renderiza Altair/Vega-Lite dentro de um container com scroll horizontal,
+    permitindo deslizar o gráfico no celular.
+    """
+    import streamlit.components.v1 as components
+
+    chart_id = f"chart_{uuid.uuid4().hex}"
+    spec = chart.to_dict()
+    spec_json = json.dumps(spec)
+
+    # Carrega libs Vega/Vega-Lite/Vega-Embed via CDN
+    # e embute o gráfico em um container rolável.
+    html = f"""
+    <style>
+      .scroll-wrap {{
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 12px;
+        background: transparent;
+        padding-bottom: 8px; /* espaço para não cortar barra de rolagem */
+      }}
+      .scroll-inner {{
+        min-width: {min_width_px}px;
+      }}
+      /* Deixa a barra de rolagem menos intrusiva (opcional) */
+      .scroll-wrap::-webkit-scrollbar {{
+        height: 10px;
+      }}
+      .scroll-wrap::-webkit-scrollbar-thumb {{
+        background: rgba(148, 163, 184, 0.55);
+        border-radius: 999px;
+      }}
+      .scroll-wrap::-webkit-scrollbar-track {{
+        background: rgba(15, 23, 42, 0.18);
+        border-radius: 999px;
+      }}
+      /* Pequeno aviso útil no mobile */
+      .hint {{
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        font-size: 12px;
+        color: rgba(148,163,184,0.95);
+        margin: 6px 0 8px 0;
+      }}
+    </style>
+
+    <div class="hint">📱 No celular, deslize para o lado para ver o gráfico completo.</div>
+    <div class="scroll-wrap">
+      <div class="scroll-inner">
+        <div id="{chart_id}"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script>
+      const spec = {spec_json};
+      vegaEmbed("#{chart_id}", spec, {{
+        actions: false,
+        renderer: "canvas"
+      }});
+    </script>
+    """
+
+    # Altura do iframe: gráfico + margem
+    components.html(html, height=height_px + 90)
 
 # ---------------------------
 # Cabeçalho (logo + título + descrição)
@@ -277,7 +353,7 @@ svg = f"""
           stroke="{wire_color}" stroke-width="18" stroke-linecap="round"/>
 
     <!-- resistor -->
-    <rect x="{xR1}" y="{y0-90}" width="{res_len}" height="180" rx="{resistor_rx}"
+    <rect x="{xR1}" y="{y0-90}" width="{res_len}" height="180" rx="44"
           fill="#111827" stroke="#fbbf24" stroke-width="{resistor_stroke_w}"/>
 
     <text x="{xR1 + res_len/2}" y="{res_label_y}" fill="#e5e7eb"
@@ -347,10 +423,7 @@ svg = f"""
 st.components.v1.html(svg, height=600)
 
 # ---------------------------
-# Gráfico: Tensão × Corrente (V×I)
-#  - X: 0..40 (2 em 2)
-#  - Y: 0..30 (5 em 5)
-#  - reta para ao chegar em 30 V (NaN acima de 30)
+# ✅ Gráfico com scroll horizontal (arraste no celular)
 # ---------------------------
 st.markdown("## Gráfico: Tensão × Corrente (V×I)")
 
@@ -389,9 +462,8 @@ point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
     color=alt.value(point_color),
 )
 
-# ✅ largura responsiva (melhor no celular)
 chart = (line + point).properties(
-    width="container",
+    width=CHART_WIDTH,     # ✅ força largura maior do que o celular
     height=CHART_HEIGHT,
     padding={"left": 70, "right": 25, "top": 20, "bottom": 60},
 ).configure_view(
@@ -400,7 +472,8 @@ chart = (line + point).properties(
     tickSize=6
 )
 
-st.altair_chart(chart, use_container_width=True)
+# ✅ renderiza com scroll horizontal
+scrollable_altair(chart, height_px=CHART_HEIGHT, min_width_px=CHART_WIDTH)
 
 # ---------------------------
 # Leituras
