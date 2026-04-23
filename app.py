@@ -75,7 +75,7 @@ with top_left:
         st.empty()
 
 with top_right:
-    st.title("Simulador Resistor Física 2")
+    st.title("Simulador Resistor Física II")
     st.write("Estude o comportamento de um resistor em um circuito simples.")
 
 st.divider()
