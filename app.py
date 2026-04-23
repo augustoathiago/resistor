@@ -8,7 +8,7 @@ import math
 # Constantes fixas do simulador
 # ---------------------------
 V_MAX = 30.0           # tensão máxima (V) e limite superior do eixo Y
-R_MIN = 750.0          # resistência mínima (Ω)
+R_MIN = 300.0          # resistência mínima (Ω)
 R_MAX = 10000.0        # resistência máxima (Ω)
 X_MAX_mA = 40.0        # limite do eixo X (mA)
 
