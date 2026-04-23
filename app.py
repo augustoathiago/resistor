@@ -8,18 +8,17 @@ import math
 # Constantes fixas do simulador
 # ---------------------------
 V_MAX = 30.0           # tensão máxima (V) e limite superior do eixo Y
-R_MIN = 750.0         # resistência mínima (Ω)
-R_MAX = 10000.0         # resistência máxima (Ω)
+R_MIN = 750.0          # resistência mínima (Ω)
+R_MAX = 10000.0        # resistência máxima (Ω)
 X_MAX_mA = 40.0        # limite do eixo X (mA)
 
-# Gráfico com tamanho fixo (não responsivo)
-CHART_WIDTH = 980
+# Altura do gráfico (largura agora é responsiva para celular)
 CHART_HEIGHT = 360
 
 st.set_page_config(
     page_title="Simulador Resistor Física 2",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",  # sidebar recolhida (agora não usamos para controles)
 )
 
 # ---------------------------
@@ -44,9 +43,6 @@ def fmt_mA(I_A: float) -> str:
 # ---------------------------
 def sync(from_key: str, to_key: str):
     st.session_state[to_key] = st.session_state[from_key]
-
-def toggle_switch():
-    st.session_state["sw"] = not st.session_state.get("sw", True)
 
 # ---------------------------
 # Estado inicial
@@ -81,68 +77,75 @@ with top_right:
 st.divider()
 
 # ---------------------------
-# Sidebar: controles
+# ✅ CONTROLES NO CORPO DA PÁGINA (mobile-friendly)
 # ---------------------------
-st.sidebar.title("Controles")
+st.markdown("## Controles")
 
-st.sidebar.subheader("Tensão da fonte (V)")
-cV1, cV2 = st.sidebar.columns([1, 1], gap="small")
-with cV1:
-    st.slider(
-        "Tensão da fonte (slider)",
-        min_value=0.0,
-        max_value=float(V_MAX),
-        value=float(st.session_state["V_slider"]),
-        step=0.1,
-        key="V_slider",
-        on_change=sync,
-        args=("V_slider", "V_input"),
-        label_visibility="collapsed",
-    )
-with cV2:
-    st.number_input(
-        "Tensão da fonte (digite)",
-        min_value=0.0,
-        max_value=float(V_MAX),
-        value=float(st.session_state["V_input"]),
-        step=0.1,
-        key="V_input",
-        on_change=sync,
-        args=("V_input", "V_slider"),
-        label_visibility="collapsed",
-    )
+with st.expander("Abrir/fechar painel de controles", expanded=True):
+    cV, cR, cS = st.columns([1.2, 1.2, 0.8], vertical_alignment="top")
 
-st.sidebar.subheader("Resistência do resistor (Ω)")
-cR1, cR2 = st.sidebar.columns([1, 1], gap="small")
-with cR1:
-    st.slider(
-        "Resistência do resistor (slider)",
-        min_value=float(R_MIN),
-        max_value=float(R_MAX),
-        value=float(st.session_state["R_slider"]),
-        step=1.0,
-        key="R_slider",
-        on_change=sync,
-        args=("R_slider", "R_input"),
-        label_visibility="collapsed",
-    )
-with cR2:
-    st.number_input(
-        "Resistência do resistor (digite)",
-        min_value=float(R_MIN),
-        max_value=float(R_MAX),
-        value=float(st.session_state["R_input"]),
-        step=1.0,
-        key="R_input",
-        on_change=sync,
-        args=("R_input", "R_slider"),
-        label_visibility="collapsed",
-    )
+    with cV:
+        st.subheader("Tensão da fonte (V)")
+        cV1, cV2 = st.columns([1, 1], gap="small")
+        with cV1:
+            st.slider(
+                "Tensão (slider)",
+                min_value=0.0,
+                max_value=float(V_MAX),
+                value=float(st.session_state["V_slider"]),
+                step=0.1,
+                key="V_slider",
+                on_change=sync,
+                args=("V_slider", "V_input"),
+                label_visibility="collapsed",
+            )
+        with cV2:
+            st.number_input(
+                "Tensão (digite)",
+                min_value=0.0,
+                max_value=float(V_MAX),
+                value=float(st.session_state["V_input"]),
+                step=0.1,
+                key="V_input",
+                on_change=sync,
+                args=("V_input", "V_slider"),
+                label_visibility="collapsed",
+            )
 
-st.sidebar.subheader("Interruptor")
-btn_label = "Abrir circuito" if st.session_state["sw"] else "Fechar circuito"
-st.sidebar.button(btn_label, use_container_width=True, on_click=toggle_switch, key="btn_switch")
-st.sidebar.write(f"**Estado:** {'ON (fechado)' if st.session_state['sw'] else 'OFF (aberto)'}")
+    with cR:
+        st.subheader("Resistência do resistor (Ω)")
+        cR1, cR2 = st.columns([1, 1], gap="small")
+        with cR1:
+            st.slider(
+                "Resistência (slider)",
+                min_value=float(R_MIN),
+                max_value=float(R_MAX),
+                value=float(st.session_state["R_slider"]),
+                step=1.0,
+                key="R_slider",
+                on_change=sync,
+                args=("R_slider", "R_input"),
+                label_visibility="collapsed",
+            )
+        with cR2:
+            st.number_input(
+                "Resistência (digite)",
+                min_value=float(R_MIN),
+                max_value=float(R_MAX),
+                value=float(st.session_state["R_input"]),
+                step=1.0,
+                key="R_input",
+                on_change=sync,
+                args=("R_input", "R_slider"),
+                label_visibility="collapsed",
+            )
+
+    with cS:
+        st.subheader("Interruptor")
+        st.toggle("Circuito fechado (ON)", key="sw")
+        st.caption(f"**Estado:** {'ON (fechado)' if st.session_state['sw'] else 'OFF (aberto)'}")
+
+st.divider()
 
 # ---------------------------
 # Modelo elétrico
@@ -344,10 +347,9 @@ svg = f"""
 st.components.v1.html(svg, height=600)
 
 # ---------------------------
-# Gráfico com eixos e tamanho totalmente fixos
+# Gráfico: Tensão × Corrente (V×I)
 #  - X: 0..40 (2 em 2)
 #  - Y: 0..30 (5 em 5)
-#  - sem clamp
 #  - reta para ao chegar em 30 V (NaN acima de 30)
 # ---------------------------
 st.markdown("## Gráfico: Tensão × Corrente (V×I)")
@@ -387,8 +389,9 @@ point = alt.Chart(df_point).mark_point(size=180, filled=True).encode(
     color=alt.value(point_color),
 )
 
+# ✅ largura responsiva (melhor no celular)
 chart = (line + point).properties(
-    width=CHART_WIDTH,
+    width="container",
     height=CHART_HEIGHT,
     padding={"left": 70, "right": 25, "top": 20, "bottom": 60},
 ).configure_view(
@@ -397,11 +400,10 @@ chart = (line + point).properties(
     tickSize=6
 )
 
-# ✅ não responsivo: tamanho nunca muda
-st.altair_chart(chart, use_container_width=False)
+st.altair_chart(chart, use_container_width=True)
 
 # ---------------------------
-# Leituras (símbolo embaixo do nome)
+# Leituras
 # ---------------------------
 st.markdown("### Leituras")
 
