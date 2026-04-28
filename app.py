@@ -444,3 +444,26 @@ with c2:
     leitura_card("Tensão do resistor", "<span style='white-space:nowrap;'>V<sub>R</sub></span>", VR_txt)
 with c3:
     leitura_card("Resistência", "R", R_txt)
+
+# ---------------------------
+# ✅ MELHORIA: Exibição do cálculo pela Lei de Ohm no final do app
+# ---------------------------
+st.divider()
+st.markdown("## Cálculo da Corrente (Lei de Ohm)")
+
+# Usar a tensão no resistor (V_R), pois é a efetivamente aplicada ao resistor
+V_calc = V_R
+
+linha_lei_ohm = (
+    f"**Lei de Ohm:** V = RI → I = V/R → "
+    f"I = {fmt_sig(V_calc,3)}/{fmt_sig(R,3)}"
+)
+
+st.markdown(linha_lei_ohm)
+
+# Se o circuito estiver aberto, reforça a interpretação física
+if not sw:
+    st.info("Interruptor OFF (circuito aberto): não há corrente no circuito, então I = 0 mA.")
+
+st.markdown(f"### **I = {fmt_sig(I_mA,3)} mA**")
+``
