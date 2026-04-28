@@ -466,4 +466,3 @@ if not sw:
     st.info("Interruptor OFF (circuito aberto): não há corrente no circuito, então I = 0 mA.")
 
 st.markdown(f"### **I = {fmt_sig(I_mA,3)} mA**")
-``
